@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-GLuint VBO, VAO, program;
+static GLuint VBO, VAO, program;
 
 char* readFile(const char path[])
 {
@@ -11,22 +12,22 @@ char* readFile(const char path[])
 	unsigned int index = 0;
 	char* str = (char *)malloc(sizeof(char) * len);
 	char* temp;
-	FILE* file = fopen(path, "r+");
-	if (!file) return NULL;
+	FILE* file = fopen(path, "r");
 	char c = getc(file);
 	while (c != EOF)
 	{
+		printf("%c",c);
 		str[index] = c; index++;
 		if (index == len) {
 			len *= 2;
-			if (NULL == (temp = realloc(str, sizeof(char) * len)))
+			if (NULL == (temp = (char *)realloc(str, sizeof(char) * len)))
 				goto error;
 			else
 				str = temp;
 		}
 		c = getc(file);
 	}
-	if (NULL == (temp = realloc(str, sizeof(char) * (index + 1))))
+	if (NULL == (temp = (char *)realloc(str, sizeof(char) * (index + 1))))
 		goto error;
 	else
 		str = temp;
@@ -36,15 +37,16 @@ char* readFile(const char path[])
 error:
 	free(str);
 	free(temp);
+	fclose(file);
 	return NULL;
 }
 
-void createTriangle()
+void CreateTriangle()
 {
 	GLfloat vertices[] = {
 		-1.0f, -1.0f, 0.0f,
 		1.0f, -1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f
 	};
 
 	glGenVertexArrays(1, &VAO);
@@ -62,9 +64,31 @@ void createTriangle()
 	glBindVertexArray(0);
 }
 
-void AddShader(GLuint program, const char* shaderCode, GLenum shaderType)
+void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)
 {
-	GLuint compiled_shader;
+	GLuint theShader = glCreateShader(shaderType);
+
+	const GLchar* theCode[1];
+	theCode[0] = shaderCode;
+
+	GLint codeLength[1];
+	codeLength[0] = strlen(shaderCode);
+
+	glShaderSource(theShader, 1, theCode, codeLength);
+	glCompileShader(theShader);
+
+	GLint result = 0;
+	GLchar eLog[1024] = { 0 };
+
+	glGetShaderiv(theShader, GL_COMPILE_STATUS, &result);
+	if (!result) 
+	{
+		glGetShaderInfoLog(theShader, 1024, NULL, eLog);
+		fprintf(stderr, "Error compiling the %d shader: '%s'\n", shaderType, eLog);
+		return;
+	}
+
+	glAttachShader(theProgram, theShader);
 }
 
 void CompileShaders()
@@ -74,11 +98,10 @@ void CompileShaders()
 	if (!program)
 		printf("Error creating shader program!");
 
-	
-	char* vShader = readFile("./shaders/vertex.shader");
+ 	char* vShader = readFile("./shaders/vertex.shader");
 	AddShader(program, vShader, GL_VERTEX_SHADER);
 	free(vShader);
-	char* fShader = readFile("./shaders/vertex.shader");
+	char* fShader = readFile("./shaders/fragment.shader");
 	AddShader(program, fShader, GL_FRAGMENT_SHADER);
 	free(fShader);
 
@@ -137,11 +160,21 @@ int main()
 		return -1;
 	}
 
+	CreateTriangle();
+	CompileShaders();
+
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
 		glClearColor(0.05f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		glUseProgram(program);
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		glBindVertexArray(0);
+		glUseProgram(0);
 
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
