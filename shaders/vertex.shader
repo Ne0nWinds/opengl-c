@@ -1,4 +1,4 @@
-#version 140 core
+#version 460
 
 layout (location = 0) in vec3 pos;
 

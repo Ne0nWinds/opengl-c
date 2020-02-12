@@ -12,8 +12,11 @@ char* readFile(const char path[])
 	unsigned int index = 0;
 	char* str = (char *)malloc(sizeof(char) * len);
 	char* temp;
+	char c;
 	FILE* file = fopen(path, "r");
-	char c = getc(file);
+	if (!file) 
+		goto error;
+	c = getc(file);
 	while (c != EOF)
 	{
 		printf("%c",c);
@@ -33,6 +36,7 @@ char* readFile(const char path[])
 		str = temp;
 	str[index] = '\0';
 	fclose(file);
+
 	return str;
 error:
 	free(str);
@@ -98,7 +102,7 @@ void CompileShaders()
 	if (!program)
 		printf("Error creating shader program!");
 
- 	char* vShader = readFile("./shaders/vertex.shader");
+	char* vShader = readFile("./shaders/vertex.shader");
 	AddShader(program, vShader, GL_VERTEX_SHADER);
 	free(vShader);
 	char* fShader = readFile("./shaders/fragment.shader");
