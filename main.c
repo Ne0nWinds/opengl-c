@@ -1,11 +1,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
 #include <stdbool.h>
 
-static GLuint VBO, VAO, program, uniformXMove;
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+
+#include <cglm/cglm.h>
+#include <cglm/call.h>
+
+static GLuint VBO, VAO, program, uniformModel;
 float triOffset = 0.0f;
 float triMaxOffset = 0.7f;
 float triIncrement = 0.005f;
@@ -133,7 +137,8 @@ void CompileShaders()
 		return;
 	}
 
-	uniformXMove = glGetUniformLocation(program, "xMove");
+	uniformModel = glGetUniformLocation(program, "model");
+
 }
 
 struct Keys {
@@ -196,17 +201,27 @@ int main()
 	{
 		glfwPollEvents();
 
-		float direction = (float)(keys.D - keys.A);
-		triOffset += triIncrement * direction;
-		if (abs(triOffset) > triMaxOffset)
-			triOffset = triMaxOffset * direction;
-
 		glClearColor(0.05f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(program);
+		float direction = (float)(keys.D - keys.A);
+		triOffset += triIncrement * direction;
+		if (fabs(triOffset) > triMaxOffset)
+			triOffset = triMaxOffset * direction;
 
-		glUniform1f(uniformXMove, triOffset);
+		mat4 model = {
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1
+		};
+		vec3 translation = {
+			triOffset, 0.0f, 0.0f
+		};
+		glm_translate(model, translation);
+
+		glUniformMatrix4fv(uniformModel,1,GL_FALSE,*model);
 
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -216,7 +231,6 @@ int main()
 
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
-
 	}
 
 	glfwDestroyWindow(window);
