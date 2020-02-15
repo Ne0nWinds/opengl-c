@@ -3,8 +3,12 @@
 #include <string.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <stdbool.h>
 
-static GLuint VBO, VAO, program;
+static GLuint VBO, VAO, program, uniformXMove;
+float triOffset = 0.0f;
+float triMaxOffset = 0.7f;
+float triIncrement = 0.005f;
 
 char* readFile(const char path[])
 {
@@ -19,7 +23,6 @@ char* readFile(const char path[])
 	c = getc(file);
 	while (c != EOF)
 	{
-		printf("%c",c);
 		str[index] = c; index++;
 		if (index == len) {
 			len *= 2;
@@ -129,6 +132,23 @@ void CompileShaders()
 		printf("Error validating program '%s'\n", eLog);
 		return;
 	}
+
+	uniformXMove = glGetUniformLocation(program, "xMove");
+}
+
+struct Keys {
+	bool A;
+	bool D;
+};
+struct Keys keys;
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (action == GLFW_REPEAT) return;
+	if (key == GLFW_KEY_A)
+		keys.A = (action == GLFW_PRESS);
+	if (key == GLFW_KEY_D)
+		keys.D = (action == GLFW_PRESS);
 }
 
 int main()
@@ -144,8 +164,8 @@ int main()
 		return -1;
 	}
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Make the window's context current */
@@ -167,13 +187,27 @@ int main()
 	CreateTriangle();
 	CompileShaders();
 
+	keys.A = false;
+	keys.D = false;
+	glfwSetKeyCallback(window, key_callback);
+
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
+		glfwPollEvents();
+
+		float direction = (float)(keys.D - keys.A);
+		triOffset += triIncrement * direction;
+		if (abs(triOffset) > triMaxOffset)
+			triOffset = triMaxOffset * direction;
+
 		glClearColor(0.05f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(program);
+
+		glUniform1f(uniformXMove, triOffset);
+
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -183,8 +217,6 @@ int main()
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
 
-		/* Poll for and process events */
-		glfwPollEvents();
 	}
 
 	glfwDestroyWindow(window);
