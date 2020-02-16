@@ -13,6 +13,12 @@ static GLuint VBO, VAO, program, uniformModel;
 float triOffset = 0.0f;
 float triMaxOffset = 0.7f;
 float triIncrement = 0.005f;
+float triRotation = 0.0f;
+
+double toRadians(double degrees)
+{
+	return degrees * (acos(-1) / (double)180);
+}
 
 char* readFile(const char path[])
 {
@@ -216,10 +222,13 @@ int main()
 			0, 0, 1, 0,
 			0, 0, 0, 1
 		};
-		vec3 translation = {
-			triOffset, 0.0f, 0.0f
-		};
+		vec3 translation = { triOffset, 0.0f, 0.0f };
 		glm_translate(model, translation);
+		vec3 rotation = {0.0f, 0.0f, 1.0f};
+		glm_rotate(model, toRadians(triRotation),rotation);
+		triRotation += 0.05f;
+		if (triRotation > 360)
+			triRotation -= 360;
 
 		glUniformMatrix4fv(uniformModel,1,GL_FALSE,*model);
 
