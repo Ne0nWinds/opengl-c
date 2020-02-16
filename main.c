@@ -28,7 +28,7 @@ char* readFile(const char path[])
 	char* temp;
 	char c;
 	FILE* file = fopen(path, "r");
-	if (!file) 
+	if (!file)
 		goto error;
 	c = getc(file);
 	while (c != EOF)
@@ -98,7 +98,7 @@ void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)
 	GLchar eLog[1024] = { 0 };
 
 	glGetShaderiv(theShader, GL_COMPILE_STATUS, &result);
-	if (!result) 
+	if (!result)
 	{
 		glGetShaderInfoLog(theShader, 1024, NULL, eLog);
 		fprintf(stderr, "Error compiling the %d shader: '%s'\n", shaderType, eLog);
