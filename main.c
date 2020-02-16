@@ -229,6 +229,8 @@ int main()
 		triRotation += 0.05f;
 		if (triRotation > 360)
 			triRotation -= 360;
+		vec3 scale = {0.4f, 0.4f, 1.0f};
+		glm_scale(model,scale);
 
 		glUniformMatrix4fv(uniformModel,1,GL_FALSE,*model);
 
