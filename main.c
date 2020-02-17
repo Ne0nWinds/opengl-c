@@ -9,7 +9,7 @@
 #include <cglm/cglm.h>
 #include <cglm/call.h>
 
-static GLuint VBO, VAO, program, uniformModel;
+static GLuint VBO, VAO, IBO, program, uniformModel, uniformProjection;
 float triOffset = 0.0f;
 float triMaxOffset = 0.7f;
 float triIncrement = 0.005f;
@@ -60,14 +60,26 @@ error:
 
 void CreateTriangle()
 {
+	unsigned int indices[] = {
+		0, 3, 1,
+		1, 3, 2,
+		2, 3, 0,
+		0, 1, 2
+	};
+
 	GLfloat vertices[] = {
 		-1.0f, -1.0f, 0.0f,
+		0.0f, -1.0f, 1.0f,
 		1.0f, -1.0f, 0.0f,
 		0.0f, 1.0f, 0.0f
 	};
 
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
+
+	glGenBuffers(1, &IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -77,6 +89,7 @@ void CreateTriangle()
 	glEnableVertexAttribArray(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	glBindVertexArray(0);
 }
@@ -144,6 +157,7 @@ void CompileShaders()
 	}
 
 	uniformModel = glGetUniformLocation(program, "model");
+	uniformProjection = glGetUniformLocation(program, "projection");
 
 }
 
@@ -194,9 +208,18 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
+	glEnable(GL_DEPTH_TEST);
 
 	CreateTriangle();
 	CompileShaders();
+
+	mat4 perspective = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+	glm_perspective(100.0f, (GLfloat)bufferWidth/(GLfloat)bufferHeight, 0.1f, 100.0f, perspective);
 
 	keys.A = false;
 	keys.D = false;
@@ -208,7 +231,7 @@ int main()
 		glfwPollEvents();
 
 		glClearColor(0.05f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glUseProgram(program);
 		float direction = (float)(keys.D - keys.A);
@@ -222,22 +245,25 @@ int main()
 			0, 0, 1, 0,
 			0, 0, 0, 1
 		};
-		vec3 translation = { triOffset, 0.0f, 0.0f };
+		vec3 translation = { triOffset, 0.0f, -2.5f };
 		glm_translate(model, translation);
-		vec3 rotation = {0.0f, 0.0f, 1.0f};
+		vec3 rotation = {1.0f, 0.0f, 0.0f};
 		glm_rotate(model, toRadians(triRotation),rotation);
-		triRotation += 0.05f;
+		triRotation += 0.1f;
 		if (triRotation > 360)
 			triRotation -= 360;
 		vec3 scale = {0.4f, 0.4f, 1.0f};
 		glm_scale(model,scale);
 
-		glUniformMatrix4fv(uniformModel,1,GL_FALSE,*model);
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, *model);
+		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, *perspective);
 
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
+
 		glUseProgram(0);
 
 		/* Swap front and back buffers */
