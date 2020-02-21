@@ -9,12 +9,78 @@
 #include <cglm/cglm.h>
 #include <cglm/call.h>
 
-static GLuint VBO, VAO, IBO, program, uniformModel, uniformProjection;
+static GLuint program, uniformModel, uniformProjection;
 float triOffset = 0.0f;
 float triMaxOffset = 0.7f;
 float triIncrement = 0.005f;
 float triRotation = 0.0f;
+typedef struct Mesh {
+	GLuint VAO, VBO, IBO;
+	GLsizei indexCount;
+} Mesh;
 
+Mesh* MeshList;
+unsigned int MeshListSize = 0;
+
+void initMesh(Mesh* mesh)
+{
+	mesh->VAO = 0;
+	mesh->VBO = 0;
+	mesh->IBO = 0;
+	mesh->indexCount = 0;
+}
+void createMesh(Mesh* mesh,GLfloat* vertices, unsigned int* indices, unsigned int numOfVertices, unsigned int numOfIndices)
+{
+	mesh->indexCount = numOfIndices;
+	glGenVertexArrays(1, &(mesh->VAO));
+	glBindVertexArray(mesh->VAO);
+
+	glGenBuffers(1, &(mesh->IBO));
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices[0]) * numOfIndices, indices, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &(mesh->VBO));
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices[0]) * numOfVertices, vertices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
+}
+void renderMesh(Mesh* mesh)
+{
+	glBindVertexArray(mesh->VAO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->IBO);
+	glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+void clearMesh(Mesh* mesh)
+{
+	if (mesh->IBO != 0)
+	{
+		glDeleteBuffers(1, &(mesh->IBO));
+		mesh->IBO = 0;
+	}
+
+	if (mesh->VBO != 0)
+	{
+		glDeleteBuffers(1, &(mesh->VBO));
+		mesh->VBO = 0;
+	}
+
+	if (mesh->VAO != 0)
+	{
+		glDeleteVertexArrays(1, &(mesh->VAO));
+		mesh->VAO = 0;
+	}
+
+	mesh->indexCount = 0;
+}
 double toRadians(double degrees)
 {
 	return degrees * (acos(-1) / (double)180);
@@ -73,25 +139,15 @@ void CreateTriangle()
 		1.0f, -1.0f, 0.0f,
 		0.0f, 1.0f, 0.0f
 	};
-
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	glGenBuffers(1, &IBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	glBindVertexArray(0);
+	MeshListSize++;
+	Mesh* MeshListTemp = realloc(MeshList,sizeof(Mesh) * MeshListSize);
+	if (MeshListTemp != NULL)
+		MeshList = MeshListTemp;
+	else
+		free(MeshListTemp);
+	Mesh* currentMesh = &MeshListTemp[MeshListSize - 1];
+	initMesh(currentMesh);
+	createMesh(currentMesh, vertices, indices, 12, 12);
 }
 
 void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)
@@ -211,6 +267,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	CreateTriangle();
+	CreateTriangle();
 	CompileShaders();
 
 	mat4 perspective = {
@@ -258,11 +315,7 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, *model);
 		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, *perspective);
 
-		glBindVertexArray(VAO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
+		renderMesh(&MeshList[0]);
 
 		glUseProgram(0);
 
