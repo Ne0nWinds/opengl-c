@@ -217,10 +217,7 @@ void CompileShaders()
 
 }
 
-struct Keys {
-	bool A;
-	bool D;
-};
+struct Keys { bool A; bool D; };
 struct Keys keys;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -296,12 +293,8 @@ int main()
 		if (fabs(triOffset) > triMaxOffset)
 			triOffset = triMaxOffset * direction;
 
-		mat4 model = {
-			1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1
-		};
+		mat4 model;
+		glm_mat4_identity(model);
 		vec3 translation = { triOffset, 0.0f, -2.5f };
 		glm_translate(model, translation);
 		vec3 rotation = {1.0f, 0.0f, 0.0f};
